@@ -5,6 +5,17 @@ import { MongoClient } from "mongodb"
 import Joi from "joi"
 import bcrypt from "bcrypt"
 
+const newUSerScheme = Joi.object({
+    name: Joi.string().min(3).max(15).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(5).required(),
+    confirmPass: Joi.string().min(5).required().valid(Joi.ref("password"))
+}).with("password", "confirmPass")
+
+const userLoginScheme = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().required()
+})
 
 dotenv.config()
 const app = express()
