@@ -33,4 +33,32 @@ try{
 const db = mongoClient.db("myWallet")
 const userCollection = db.collection("users")
 
+app.post("/sign-up", async (req, res) => {
+    const user = req.body
+
+    try {
+        const userExists = await userCollection.findOne({email: user.email})
+        if (userExists) {
+            return res.status(409).send({message: "Email already in use"})
+        }
+
+        const {error} = newUSerScheme.validate(user, {abortEarly: false})
+        if (error) {
+            const errors = error.details.map(detail => detail.message)
+            return res.status(400).send(errors)
+        }
+
+        const hashPassword = bcrypt.hashSync(user.password, 10)
+
+        delete user.confirmPass
+
+        await userCollection.insertOne({...user, password: hashPassword})
+        res.status(201)
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
+    res.send()
+})
+
 app.listen(5656, () => console.log("Server running in port 5656"))
