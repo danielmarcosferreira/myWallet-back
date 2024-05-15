@@ -4,6 +4,7 @@ import dotenv from "dotenv"
 import { MongoClient } from "mongodb"
 import Joi from "joi"
 import bcrypt from "bcrypt"
+import { v4 as uuidV4 } from "uuid"
 
 const newUSerScheme = Joi.object({
     name: Joi.string().min(3).max(15).required(),
@@ -24,7 +25,7 @@ app.use(express.json())
 
 const mongoClient = new MongoClient(process.env.MONGO_URI)
 
-try{
+try {
     await mongoClient.connect()
 } catch (err) {
     console.log(err)
@@ -32,17 +33,18 @@ try{
 
 const db = mongoClient.db("myWallet")
 const userCollection = db.collection("users")
+const sessionCollection = db.collection("sessions")
 
 app.post("/sign-up", async (req, res) => {
     const user = req.body
 
     try {
-        const userExists = await userCollection.findOne({email: user.email})
+        const userExists = await userCollection.findOne({ email: user.email })
         if (userExists) {
-            return res.status(409).send({message: "Email already in use"})
+            return res.status(409).send({ message: "Email already in use" })
         }
 
-        const {error} = newUSerScheme.validate(user, {abortEarly: false})
+        const { error } = newUSerScheme.validate(user, { abortEarly: false })
         if (error) {
             const errors = error.details.map(detail => detail.message)
             return res.status(400).send(errors)
@@ -52,13 +54,42 @@ app.post("/sign-up", async (req, res) => {
 
         delete user.confirmPass
 
-        await userCollection.insertOne({...user, password: hashPassword})
+        await userCollection.insertOne({ ...user, password: hashPassword })
         res.status(201)
     } catch (err) {
         console.log(err)
         return res.sendStatus(500)
     }
     res.send()
+})
+
+app.post("/sign-in", async (req, res) => {
+    const { email, password } = req.body
+
+    const token = uuidV4()
+
+    try {
+        const userExists = await userCollection.findOne({ email })
+        if (!userExists) {
+            return res.status(401).send({ message: "User not found" })
+        }
+
+        const isPasswordOk = bcrypt.compareSync(password, userExists.password)
+        if (!isPasswordOk) {
+            return res.sendStatus(401)
+        }
+
+        await sessionCollection.insertOne({
+            token,
+            userId: userExists._id
+        })
+
+        return res.send({ token })
+
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
 })
 
 app.listen(5656, () => console.log("Server running in port 5656"))
