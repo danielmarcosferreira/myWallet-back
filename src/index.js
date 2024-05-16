@@ -84,12 +84,40 @@ app.post("/sign-in", async (req, res) => {
             userId: userExists._id
         })
 
-        return res.send({ token })
+        const returnUser = {token, name: userExists.name, email}
+        return res.send( returnUser )
 
     } catch (err) {
         console.log(err)
         return res.sendStatus(500)
     }
+})
+
+app.get("/my-data", async (req, res) => {
+    const { authorization } = req.headers
+    const token = authorization?.replace("Bearer ", "")
+
+    if (!token) {
+        return res.sendStatus(401)
+    }
+
+    try{
+        const session = await sessionCollection.findOne({token})
+        const user = await userCollection.findOne({_id: session?.userId})
+
+        if (!user) {
+            return res.sendStatus(401)
+        }
+
+        delete user.password
+
+        res.send({user})
+
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
+
 })
 
 app.listen(5656, () => console.log("Server running in port 5656"))
