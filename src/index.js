@@ -79,6 +79,12 @@ app.post("/sign-in", async (req, res) => {
             return res.sendStatus(401)
         }
 
+        const { error } = userLoginScheme.validate(req.body, { abortEarly: false })
+        if (error) {
+            const errors = error.details.map(detail => detail.message)
+            return res.status(400).send(errors)
+        }
+
         await sessionCollection.insertOne({
             token,
             userId: userExists._id
@@ -116,6 +122,7 @@ app.get("/my-data", async (req, res) => {
     } catch (err) {
         console.log(err)
         return res.sendStatus(500)
+
     }
 
 })
