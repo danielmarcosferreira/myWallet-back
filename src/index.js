@@ -34,6 +34,7 @@ try {
 const db = mongoClient.db("myWallet")
 const userCollection = db.collection("users")
 const sessionCollection = db.collection("sessions")
+const dataCollection = db.collection("myData")
 
 app.post("/sign-up", async (req, res) => {
     const user = req.body
@@ -90,8 +91,8 @@ app.post("/sign-in", async (req, res) => {
             userId: userExists._id
         })
 
-        const returnUser = {token, name: userExists.name, email}
-        return res.send( returnUser )
+        const returnUser = { token, name: userExists.name, email }
+        return res.send(returnUser)
 
     } catch (err) {
         console.log(err)
@@ -107,9 +108,9 @@ app.get("/my-data", async (req, res) => {
         return res.sendStatus(401)
     }
 
-    try{
-        const session = await sessionCollection.findOne({token})
-        const user = await userCollection.findOne({_id: session?.userId})
+    try {
+        const session = await sessionCollection.findOne({ token })
+        const user = await userCollection.findOne({ _id: session?.userId })
 
         if (!user) {
             return res.sendStatus(401)
@@ -117,7 +118,7 @@ app.get("/my-data", async (req, res) => {
 
         delete user.password
 
-        res.send({user})
+        res.send({ user })
 
     } catch (err) {
         console.log(err)
@@ -125,6 +126,23 @@ app.get("/my-data", async (req, res) => {
 
     }
 
+})
+
+app.post("/newData", async (req, res) => {
+    const { type, email, price, description } = req.body
+
+    try {
+        await dataCollection.insertOne({
+            type,
+            email,
+            price,
+            description
+        })
+        return res.status(201).send({message: "Data sent"})
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
 })
 
 app.listen(5656, () => console.log("Server running in port 5656"))
