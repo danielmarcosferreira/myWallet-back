@@ -100,23 +100,50 @@ app.post("/sign-in", async (req, res) => {
     }
 })
 
-app.get("/my-data", async (req, res) => {
+app.post("/newData", async (req, res) => {
+    const { price, description } = req.body
     const { authorization } = req.headers
-    const token = authorization?.replace("Bearer ", "")
 
+    const token = authorization?.replace("Bearer ", "")
     if (!token) {
         return res.sendStatus(401)
     }
 
     try {
-        const session = await sessionCollection.findOne({ token })
-        const user = await userCollection.findOne({ _id: session?.userId })
+        const session = await sessionCollection.findOne({token})
+        const user = await userCollection.findOne({_id: session.userId})
 
-        if (!user) {
-            return res.sendStatus(401)
+        await dataCollection.insertOne({
+            type: "plus",
+            price,
+            description,
+            userId: user._id
+        })
+        return res.status(201).send({ message: "Data sent" })
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
+})
+
+app.get("/my-data", async (req, res) => {
+    // const { authorization } = req.headers
+    // const token = authorization?.replace("Bearer ", "")
+    const { email } = req.body
+
+    try {
+        // const session = await sessionCollection.findOne({ token })
+        // const user = await userCollection.findOne({ _id: session?.userId })
+
+        // if (!user) {
+        //     return res.sendStatus(401)
+        // }
+
+        // delete user.password
+        const datas = dataCollection.findOne({ email })
+        if (datas) {
+            return res.status(201).send(datas)
         }
-
-        delete user.password
 
         res.send({ user })
 
@@ -124,24 +151,6 @@ app.get("/my-data", async (req, res) => {
         console.log(err)
         return res.sendStatus(500)
 
-    }
-
-})
-
-app.post("/newData", async (req, res) => {
-    const { type, email, price, description } = req.body
-
-    try {
-        await dataCollection.insertOne({
-            type,
-            email,
-            price,
-            description
-        })
-        return res.status(201).send({message: "Data sent"})
-    } catch (err) {
-        console.log(err)
-        return res.sendStatus(500)
     }
 })
 
