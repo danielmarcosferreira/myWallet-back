@@ -113,7 +113,14 @@ app.post("/newData", async (req, res) => {
 
     try {
         const session = await sessionCollection.findOne({token})
+        if (!session) {
+            return res.status(401).send({message: "Session not found"})
+        }
+
         const user = await userCollection.findOne({_id: session.userId})
+        if (!user) {
+            return res.status(401).send({message: "User not found"})
+        }
 
         await dataCollection.insertOne({
             type: "plus",
@@ -122,6 +129,7 @@ app.post("/newData", async (req, res) => {
             description,
             userId: user._id
         })
+
         return res.status(201).send({ message: "Data sent" })
     } catch (err) {
         console.log(err)
@@ -132,6 +140,7 @@ app.post("/newData", async (req, res) => {
 app.post("/newOutput", async (req, res) => {
     const { price, description } = req.body
     const { authorization } = req.headers
+    const date = new dayjs().format("DD/MM")
 
     const token = authorization?.replace("Bearer ", "")
     if (!token) {
@@ -140,10 +149,18 @@ app.post("/newOutput", async (req, res) => {
 
     try {
         const session = await sessionCollection.findOne({ token })
+        if (!session) {
+            return res.status(401).send({ message: "Session not found" })
+        }
+
         const user = await userCollection.findOne({ _id: session.userId })
+        if (!user) {
+            return res.status(401).send({ message: "User not found" })
+        }
 
         await dataCollection.insertOne({
             type: "minus",
+            date,
             price,
             description,
             userId: user._id
