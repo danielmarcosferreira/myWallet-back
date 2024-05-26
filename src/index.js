@@ -5,6 +5,7 @@ import { MongoClient } from "mongodb"
 import Joi from "joi"
 import bcrypt from "bcrypt"
 import { v4 as uuidV4 } from "uuid"
+import { ObjectId } from "mongodb"
 
 const newUSerScheme = Joi.object({
     name: Joi.string().min(3).max(15).required(),
@@ -127,30 +128,31 @@ app.post("/newData", async (req, res) => {
 })
 
 app.get("/my-data", async (req, res) => {
-    // const { authorization } = req.headers
-    // const token = authorization?.replace("Bearer ", "")
-    const { email } = req.body
+    const { authorization } = req.headers
+
+    const token = authorization?.replace("Bearer ", "")
+    if (!token) {
+        return res.sendStatus(401)
+    }
 
     try {
-        // const session = await sessionCollection.findOne({ token })
-        // const user = await userCollection.findOne({ _id: session?.userId })
-
-        // if (!user) {
-        //     return res.sendStatus(401)
-        // }
-
-        // delete user.password
-        const datas = dataCollection.findOne({ email })
-        if (datas) {
-            return res.status(201).send(datas)
+        const session = await sessionCollection.findOne({ token })
+        if (!session) {
+            return res.sendStatus(401)
         }
 
-        res.send({ user })
+        const user = await userCollection.findOne({ _id: session.userId })
+        if (!user) {
+            return res.sendStatus(401)
+        }
+
+        const allData = await dataCollection.find({userId: user._id}).toArray()
+
+        res.send(allData)
 
     } catch (err) {
         console.log(err)
         return res.sendStatus(500)
-
     }
 })
 
