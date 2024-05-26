@@ -5,7 +5,7 @@ import { MongoClient } from "mongodb"
 import Joi from "joi"
 import bcrypt from "bcrypt"
 import { v4 as uuidV4 } from "uuid"
-import { ObjectId } from "mongodb"
+import dayjs from "dayjs"
 
 const newUSerScheme = Joi.object({
     name: Joi.string().min(3).max(15).required(),
@@ -104,6 +104,7 @@ app.post("/sign-in", async (req, res) => {
 app.post("/newData", async (req, res) => {
     const { price, description } = req.body
     const { authorization } = req.headers
+    const date = new dayjs().format("DD/MM")
 
     const token = authorization?.replace("Bearer ", "")
     if (!token) {
@@ -116,6 +117,33 @@ app.post("/newData", async (req, res) => {
 
         await dataCollection.insertOne({
             type: "plus",
+            date,
+            price,
+            description,
+            userId: user._id
+        })
+        return res.status(201).send({ message: "Data sent" })
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
+})
+
+app.post("/newOutput", async (req, res) => {
+    const { price, description } = req.body
+    const { authorization } = req.headers
+
+    const token = authorization?.replace("Bearer ", "")
+    if (!token) {
+        return res.sendStatus(401)
+    }
+
+    try {
+        const session = await sessionCollection.findOne({ token })
+        const user = await userCollection.findOne({ _id: session.userId })
+
+        await dataCollection.insertOne({
+            type: "minus",
             price,
             description,
             userId: user._id
