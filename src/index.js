@@ -161,7 +161,7 @@ app.post("/newOutput", async (req, res) => {
         await dataCollection.insertOne({
             type: "minus",
             date,
-            price,
+            price: price * -1,
             description,
             userId: user._id
         })
