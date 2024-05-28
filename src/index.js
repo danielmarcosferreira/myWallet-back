@@ -1,7 +1,7 @@
 import express from "express"
 import cors from "cors"
 import dotenv from "dotenv"
-import { MongoClient } from "mongodb"
+import { MongoClient, ObjectId } from "mongodb"
 import Joi from "joi"
 import bcrypt from "bcrypt"
 import { v4 as uuidV4 } from "uuid"
@@ -112,14 +112,14 @@ app.post("/newData", async (req, res) => {
     }
 
     try {
-        const session = await sessionCollection.findOne({token})
+        const session = await sessionCollection.findOne({ token })
         if (!session) {
-            return res.status(401).send({message: "Session not found"})
+            return res.status(401).send({ message: "Session not found" })
         }
 
-        const user = await userCollection.findOne({_id: session.userId})
+        const user = await userCollection.findOne({ _id: session.userId })
         if (!user) {
-            return res.status(401).send({message: "User not found"})
+            return res.status(401).send({ message: "User not found" })
         }
 
         await dataCollection.insertOne({
@@ -191,7 +191,7 @@ app.get("/my-data", async (req, res) => {
             return res.sendStatus(401)
         }
 
-        const allData = await dataCollection.find({userId: user._id}).toArray()
+        const allData = await dataCollection.find({ userId: user._id }).toArray()
 
         res.send(allData)
 
@@ -200,5 +200,25 @@ app.get("/my-data", async (req, res) => {
         return res.sendStatus(500)
     }
 })
+
+app.delete("/my-data/:id", async (req, res) => {
+    const { id } = req.params
+
+    try {
+        if (!id) {
+            return res.sendStatus(401)
+        }
+
+        const item = await dataCollection.deleteOne({ _id: new ObjectId(id) })
+        if (!item) {
+            return res.sendStatus(401)
+        }
+        return res.status(200).send({ message: "Document deleted successfully" })
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
+})
+
 
 app.listen(5656, () => console.log("Server running in port 5656"))
