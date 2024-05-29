@@ -220,5 +220,23 @@ app.delete("/my-data/:id", async (req, res) => {
     }
 })
 
+app.put("/my-data/:id", async (req, res) => {
+    const { id } = req.params
+    const option = req.body
+
+    try {
+        const optionFinded = await dataCollection.findOne({ _id: new ObjectId(id) })
+        if (!optionFinded) {
+            return res.status(400).send("Option not found")
+        }
+
+        await dataCollection.updateOne({ _id: new ObjectId(id) }, { $set: option })
+        return res.send("Uptadeted option successfully")
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
+})
+
 
 app.listen(5656, () => console.log("Server running in port 5656"))
