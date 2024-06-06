@@ -1,11 +1,12 @@
 import express from "express"
 import cors from "cors"
 import dotenv from "dotenv"
-import { MongoClient, ObjectId } from "mongodb"
+import { ObjectId } from "mongodb"
 import Joi from "joi"
 import bcrypt from "bcrypt"
 import { v4 as uuidV4 } from "uuid"
 import dayjs from "dayjs"
+import { userCollection, sessionCollection, dataCollection } from "./dataBase/db.js"
 
 const newUSerScheme = Joi.object({
     name: Joi.string().min(3).max(15).required(),
@@ -23,19 +24,6 @@ dotenv.config()
 const app = express()
 app.use(cors())
 app.use(express.json())
-
-const mongoClient = new MongoClient(process.env.MONGO_URI)
-
-try {
-    await mongoClient.connect()
-} catch (err) {
-    console.log(err)
-}
-
-const db = mongoClient.db("myWallet")
-const userCollection = db.collection("users")
-const sessionCollection = db.collection("sessions")
-const dataCollection = db.collection("myData")
 
 app.post("/sign-up", async (req, res) => {
     const user = req.body
