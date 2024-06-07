@@ -1,26 +1,10 @@
-import { sessionCollection, userCollection, dataCollection } from "../dataBase/db.js"
+import { dataCollection } from "../dataBase/db.js"
 import dayjs from "dayjs"
 import { ObjectId } from "mongodb"
 
-export async function getMyData (req, res) {
-    const { authorization } = req.headers
-
-    const token = authorization?.replace("Bearer ", "")
-    if (!token) {
-        return res.sendStatus(401)
-    }
-
+export async function getMyData(req, res) {
+    const user = req.user
     try {
-        const session = await sessionCollection.findOne({ token })
-        if (!session) {
-            return res.sendStatus(401)
-        }
-
-        const user = await userCollection.findOne({ _id: session.userId })
-        if (!user) {
-            return res.sendStatus(401)
-        }
-
         const allData = await dataCollection.find({ userId: user._id }).toArray()
 
         res.send(allData)
@@ -31,26 +15,11 @@ export async function getMyData (req, res) {
     }
 }
 
-export async function postData (req, res) {
+export async function postData(req, res) {
     const { price, description, signal } = req.body
-    const { authorization } = req.headers
     const date = new dayjs().format("DD/MM")
-
-    const token = authorization?.replace("Bearer ", "")
-    if (!token) {
-        return res.sendStatus(401)
-    }
-
+    const user = req.user
     try {
-        const session = await sessionCollection.findOne({ token })
-        if (!session) {
-            return res.status(401).send({ message: "Session not found" })
-        }
-
-        const user = await userCollection.findOne({ _id: session.userId })
-        if (!user) {
-            return res.status(401).send({ message: "User not found" })
-        }
         let truePrice;
         if (signal === "minus") {
             truePrice = price * -1
@@ -73,17 +42,16 @@ export async function postData (req, res) {
     }
 }
 
-export async function deleteData (req, res) {
+export async function deleteData(req, res) {
     const { id } = req.params
-
     try {
         if (!id) {
-            return res.sendStatus(401)
+            return res.status(401).send({ message: "NAO TEM ID" })
         }
 
         const item = await dataCollection.deleteOne({ _id: new ObjectId(id) })
         if (!item) {
-            return res.sendStatus(401)
+            return res.status(401).send({ message: "Nao achou no data collection" })
         }
         return res.status(200).send({ message: "Document deleted successfully" })
     } catch (err) {
@@ -92,7 +60,7 @@ export async function deleteData (req, res) {
     }
 }
 
-export async function attData (req, res) {
+export async function attData(req, res) {
     const { id } = req.params
     const option = req.body
 
