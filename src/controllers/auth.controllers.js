@@ -1,28 +1,16 @@
 import bcrypt from "bcrypt"
 import { v4 as uuidV4 } from "uuid"
 import { userCollection, sessionCollection } from "../dataBase/db.js";
-import { newUserScheme, userLoginScheme } from "../models/users.model.js"
 
 export async function signUp(req, res) {
-    const user = req.body
+    const newUser = res.locals.user
 
     try {
-        const userExists = await userCollection.findOne({ email: user.email })
-        if (userExists) {
-            return res.status(409).send({ message: "Email already in use" })
-        }
+        const hashPassword = bcrypt.hashSync(newUser.password, 10)
 
-        const { error } = newUserScheme.validate(user, { abortEarly: false })
-        if (error) {
-            const errors = error.details.map(detail => detail.message)
-            return res.status(400).send(errors)
-        }
+        delete newUser.confirmPass
 
-        const hashPassword = bcrypt.hashSync(user.password, 10)
-
-        delete user.confirmPass
-
-        await userCollection.insertOne({ ...user, password: hashPassword })
+        await userCollection.insertOne({ ...newUser, password: hashPassword })
         res.status(201)
     } catch (err) {
         console.log(err)
@@ -32,33 +20,16 @@ export async function signUp(req, res) {
 }
 
 export async function signIn(req, res) {
-    const { email, password } = req.body
-
+    const user = res.locals.user
     const token = uuidV4()
 
     try {
-        const userExists = await userCollection.findOne({ email })
-        if (!userExists) {
-            return res.status(401).send({ message: "User not found" })
-        }
-
-        const isPasswordOk = bcrypt.compareSync(password, userExists.password)
-        if (!isPasswordOk) {
-            return res.sendStatus(401)
-        }
-
-        const { error } = userLoginScheme.validate(req.body, { abortEarly: false })
-        if (error) {
-            const errors = error.details.map(detail => detail.message)
-            return res.status(400).send(errors)
-        }
-
         await sessionCollection.insertOne({
             token,
-            userId: userExists._id
+            userId: user._id
         })
 
-        const returnUser = { token, name: userExists.name, email }
+        const returnUser = { token, name: user.name, email: user.email }
         return res.send(returnUser)
 
     } catch (err) {

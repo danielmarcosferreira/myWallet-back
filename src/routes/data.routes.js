@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { attData, deleteData, getMyData, postData } from "../controllers/data.controllers.js";
-import { authValidation } from "../middlewares/authValidation.middleware.js";
+import { authValidation } from "../middlewares/authDataValidation.middleware.js";
 
 const router = Router()
 

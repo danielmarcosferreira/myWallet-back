@@ -1,29 +1,48 @@
-import { sessionCollection, userCollection } from "../dataBase/db.js"
+import bcrypt from "bcrypt"
+import { newUserScheme, userLoginScheme } from "../models/users.model.js";
+import { userCollection } from "../dataBase/db.js";
 
-export async function authValidation (req, res, next) {
-    const { authorization } = req.headers
-    let user;
+export async function signUpValidation(req, res, next) {
+    const newUser = req.body
 
-    try {
-        const token = authorization?.replace("Bearer ", "")
-        if (!token) {
-            return res.status(401).send({message: "Token not founded"})
-        }
-        const session = await sessionCollection.findOne({ token })
-        if (!session) {
-            return res.status(401).send({ message: "Session not found" })
-        }
-
-        user = await userCollection.findOne({ _id: session.userId })
-        if (!user) {
-            return res.status(401).send({ message: "User not found" })
-        }
-
-    } catch (err) {
-        console.log(err)
+    const emailInUse = await userCollection.findOne({ email: newUser.email })
+    if (emailInUse) {
+        return res.status(409).send({ message: "Email already in use" })
     }
 
-    req.user = user;
+    const { error } = newUserScheme.validate(newUser, { abortEarly: false })
+    if (error) {
+        const errors = error.details.map(detail => detail.message)
+        return res.status(400).send(errors)
+    }
 
+    res.locals.user = newUser;
+    next()
+}
+
+export async function signInValidation(req, res, next) {
+    const { email, password } = req.body
+    let user;
+    try {
+        user = await userCollection.findOne({ email })
+        if (!user) {
+            return res.sendStatus(401)
+        }
+
+        const isPasswordOk = bcrypt.compareSync(password, user.password)
+        if (!isPasswordOk) {
+            return res.sendStatus(401)
+        }
+
+        const { error } = userLoginScheme.validate(req.body, { abortEarly: false })
+        if (error) {
+            const errors = error.details.map(detail => detail.message)
+            return res.status(400).send(errors)
+        }
+    } catch (err) {
+        console.log(err)
+        return res.sendStatus(500)
+    }
+    res.locals.user = user;
     next()
 }
