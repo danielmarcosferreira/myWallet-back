@@ -11,4 +11,6 @@ app.use(express.json())
 app.use(authRoutes)
 app.use(dataRoutes)
 
-app.listen(5656, () => console.log("Server running in port 5656"))
+const port = process.env.PORT || 5656
+
+app.listen(port, () => console.log(`Server running in port ${port}`))
